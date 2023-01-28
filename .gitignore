@@ -1,0 +1,10 @@
+dataset/
+header/
+标准header/
+词频/
+频率/
+输出数据/
+.idea/
+*.zip
+*.json
+*.html
