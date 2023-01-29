@@ -238,7 +238,7 @@ def cut_leaf(Tree):
             nid = Tree.get_node(i)
             if (nid.tag.split(':')[-1] == "null"):
                 Tree.link_past_node(i)
-        path_len = len(tree.paths_to_leaves())
+        path_len = len(Tree.paths_to_leaves())
     return Tree
 
 
@@ -380,7 +380,7 @@ def read_sql_Data(path):
         count+=1
         file_path = '' + path + '\\' + i
         sql_processed(file_path)
-        if count ==1:
+        if count==10:
             break
     return sqldata
 
@@ -403,9 +403,9 @@ if __name__ == '__main__':
     # print(np.sum(finger_countlist))
     # # tree = cut_leaf(tree)
     # tree.save2file('./tree.txt', key=False)
-    #
-    #
-    #
+
+
+
     # jsondata = tree.to_json(sort=False)
     # redata = json.loads(jsondata)
     # with open('./treedata.json', 'w') as f:
