@@ -351,6 +351,7 @@ def write2sql(data):
     num = len (data)
     count=0
     cur = db.cursor()
+
     sqlQuery = "CREATE TABLE Finger(Server VARCHAR(1000) NOT NULL ,content_length CHAR(255),connection_ CHAR(255),pragma TEXT,transfer_enconding TEXT,upgrade CHAR(255),via TEXT," \
                "age CHAR(255),etag TEXT,location TEXT,vary CHAR(255),www_authenticate TEXT,title TEXT,body MEDIUMTEXT)"
     cur.execute(sqlQuery)
@@ -362,6 +363,11 @@ def write2sql(data):
             strlist.append(finger[key].split('@')[0])
         for add_key in additional_figure:
             strlist.append(finger[add_key].split('@')[0])
+        try:
+            db.ping()
+        except:
+            db = pymysql.connect(host=DBHOST, user=DBUSER, password=DBPASS, database=DBNAME)
+            cur = db.cursor()
         sqlQuery = " INSERT INTO Finger (Server,content_length,connection_,pragma,transfer_enconding,upgrade,via,age,etag,location,vary,www_authenticate,title,body) " \
                    "VALUE (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
         value = []
@@ -374,14 +380,14 @@ def write2sql(data):
 
 def read_sql_Data(path):
     file_name = os.listdir(path)
-    count=0
-    for i in file_name:
+    print(file_name)
+    count=1
+    for i in file_name[0:10]:
         print("count:",count)
-        count+=1
+        # count+=1;
         file_path = '' + path + '\\' + i
         sql_processed(file_path)
-        if count==10:
-            break
+        count+=1
     return sqldata
 
 
