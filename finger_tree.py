@@ -352,9 +352,9 @@ def write2sql(data):
     count=0
     cur = db.cursor()
 
-    sqlQuery = "CREATE TABLE Finger(Server VARCHAR(1000) NOT NULL ,content_length CHAR(255),connection_ CHAR(255),pragma TEXT,transfer_enconding TEXT,upgrade CHAR(255),via TEXT," \
-               "age CHAR(255),etag TEXT,location TEXT,vary CHAR(255),www_authenticate TEXT,title TEXT,body MEDIUMTEXT)"
-    cur.execute(sqlQuery)
+    # sqlQuery = "CREATE TABLE Finger(Server VARCHAR(1000) NOT NULL ,content_length CHAR(255),connection_ CHAR(255),pragma TEXT,transfer_enconding TEXT,upgrade CHAR(255),via TEXT," \
+    #            "age CHAR(255),etag TEXT,location TEXT,vary CHAR(255),www_authenticate TEXT,title TEXT,body MEDIUMTEXT)"
+    # cur.execute(sqlQuery)
     for finger in data:
         print(count,num)
         count+=1
@@ -381,8 +381,8 @@ def write2sql(data):
 def read_sql_Data(path):
     file_name = os.listdir(path)
     print(file_name)
-    count=1
-    for i in file_name[0:10]:
+    count=71
+    for i in file_name[71:]:
         print("count:",count)
         # count+=1;
         file_path = '' + path + '\\' + i
