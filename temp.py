@@ -123,14 +123,12 @@ def tree2printing():
             node = tree.get_node(nid)
             tag_list.append(node.tag)
         path_list.append(tag_list)
-
     for item in path_list:
-        if len(item) > 2:
-            # 指纹
-            printing = "&&".join(item[1:-1])
-            # 对应的设备类型
-            taget = item[-1]
-            print_list.append((printing, taget))
+        finger_num = item[-1]
+        finger = ''
+        item = [x for x in item if x.split(':')[-1]!='null']
+        finger = "&&".join(item[1:-1])
+        print_list.append((finger,finger_num))
     return print_list
 
 
@@ -168,7 +166,7 @@ tree=Tree()
 tree.create_node("root",0)
 #tree.create_node() paramater:tag,id,root
 
-list,fre=sort(data,"server")
+List,fre=sort(data,"server")
 
 
 for i in fre:
@@ -185,7 +183,7 @@ for key in common_header:
     if(key=='server'): ##已经分了server
         continue
     TempList=[]
-    for l in list:
+    for l in List:
         parents=rootqueue.get()
         temp,children=sort(l,key)
         for j in temp:
@@ -205,21 +203,23 @@ for key in common_header:
                 tree.create_node(nodename, id, parents)
             except:
                 continue
-    list=TempList
+    List=TempList
 
 
 
 
 count = 0
 path_len = len(tree.paths_to_leaves())
-for j in range(path_len):
-    # print(j,path_len)
-    path = tree.paths_to_leaves()[j]
-    for i in path:
-        nid = tree.get_node(i)
-        if (nid.tag.split(':')[-1] == "null"):
-            tree.link_past_node(i)
-    path_len = len(tree.paths_to_leaves())
+
+##减枝操作
+# for j in range(path_len):
+#     # print(j,path_len)
+#     path = tree.paths_to_leaves()[j]
+#     for i in path:
+#         nid = tree.get_node(i)
+#         if (nid.tag.split(':')[-1] == "null"):
+#             tree.link_past_node(i)
+#     path_len = len(tree.paths_to_leaves())
 
 
 
@@ -254,25 +254,32 @@ tree.show(key=False)
 
 ############################输出资产书多的指纹
 print_list = tree2printing()
+print(print_list)
+fp = open('./finger.txt','w')
 for item in print_list:
     printing = item[0]
     Last_figure = item[1]
     numcount = int(Last_figure.split('#')[-1])
+    printing+="&&"
     printing+=Last_figure.split('#')[0]
-    if numcount>=3:
-        print("指纹：", printing)
+    if numcount>=1:
+        out='数量{},{}'.format(numcount,printing)
+        with open('finger.txt', 'a') as fp:
+            fp.write(out+'\n')
+    fp.close()
 ############################
-print(np.sum(finger_countlist))
+# print(np.sum(finger_countlist))
 
 
 
 ############################输出所有指纹
-# print_list = tree2printing()
-# for item in print_list:
-#     printing = item[0]
-#     Last_figure = item[1]
-#     printing+=Last_figure.split('#')[0]
-#     print(printing)
+print_list = tree2printing()
+for item in print_list:
+    printing = item[0]
+    Last_figure = item[1]
+    printing+="&&"
+    printing+=Last_figure.split('#')[0]
+    print(printing)
 ############################
 
 
@@ -281,31 +288,31 @@ redata = json.loads(jsondata)
 with open('./treedatatemp.json','w') as f:
     json.dump(redata,f)
 
-import pymysql
-DBHOST = 'localhost'
-DBUSER = 'root'
-DBPASS = '123456'
-DBNAME= 'dbtest'
+# import pymysql
+# DBHOST = 'localhost'
+# DBUSER = 'root'
+# DBPASS = '123456'
+# DBNAME= 'dbtest'
 
 
-print(data)
-
-common_header = ['server','content-type','content-length','location','connectino']
-db = pymysql.connect(host=DBHOST,user=DBUSER,password=DBPASS,database=DBNAME)
-cur = db.cursor()
-# sqlQuery = "CREATE TABLE Finger(Server CHAR(20) NOT NULL ,Content_type CHAR(20),content_length CHAR(20),connection CHAR(20),location CHAR(20))"
-# cur.execute(sqlQuery)
 
 
-for finger in data:
-    strlist = []
-    for figure in finger.values():
-        strlist.append(figure.split('@')[0])
-    sqlQuery = " INSERT INTO Finger (Server, Content_type, content_length,connection,location) VALUE (%s,%s,%s,%s,%s) "
-    value = []
-    for i in range(len(common_header)):
-        value.append(str(strlist[i]))
-    value = tuple(value)
-    cur.execute(sqlQuery,value)
-    db.commit()
-db.close()
+# common_header = ['server','content-type','content-length','location','connectino']
+# db = pymysql.connect(host=DBHOST,user=DBUSER,password=DBPASS,database=DBNAME)
+# cur = db.cursor()
+# # sqlQuery = "CREATE TABLE Finger(Server CHAR(20) NOT NULL ,Content_type CHAR(20),content_length CHAR(20),connection CHAR(20),location CHAR(20))"
+# # cur.execute(sqlQuery)
+#
+#
+# for finger in data:
+#     strlist = []
+#     for figure in finger.values():
+#         strlist.append(figure.split('@')[0])
+#     sqlQuery = " INSERT INTO Finger (Server, Content_type, content_length,connection,location) VALUE (%s,%s,%s,%s,%s) "
+#     value = []
+#     for i in range(len(common_header)):
+#         value.append(str(strlist[i]))
+#     value = tuple(value)
+#     cur.execute(sqlQuery,value)
+#     db.commit()
+# db.close()

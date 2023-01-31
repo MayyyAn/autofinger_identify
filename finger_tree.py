@@ -172,7 +172,7 @@ def create_fingerTree(data):
     rootqueue = Queue()
     tree = Tree()
     tree.create_node("root", 0)
-    list, fre = sort(data, "server")
+    List, fre = sort(data, "server")
     for i in fre:
         id += 1
         rootqueue.put(id)
@@ -182,7 +182,7 @@ def create_fingerTree(data):
         if (key == 'server'):  ##已经分了server
             continue
         TempList = []
-        for l in list:
+        for l in List:
             parents = rootqueue.get()
             temp, children = sort(l, key)
             for j in temp:
@@ -203,7 +203,7 @@ def create_fingerTree(data):
                 except:
                     continue
                     print("error")
-        list = TempList
+        List = TempList
     return tree
 ######
 
@@ -274,8 +274,8 @@ def cal_percentile(Countlist):
     mid =np.median(Countlist)
     quarter = np.percentile(Countlist,25)
     quarter3 = np.percentile(Countlist,75)
-    most = np.percentile(Countlist,98)
-    return mid,quarter,quarter3,most
+    sortedarray = sorted(Countlist,reverse=True)
+    return mid,quarter,quarter3,sortedarray
 
 
 # def to_txt(path):
@@ -390,25 +390,64 @@ def read_sql_Data(path):
         count+=1
     return sqldata
 
+def get_finger(Tree):
+    path_list = []
+    print_list = []
+    for path in Tree.paths_to_leaves():
+        tag_list = []
+        for nid in path:
+            node = Tree.get_node(nid)
+            tag_list.append(node.tag)
+        path_list.append(tag_list)
+
+    for item in path_list:
+        finger_num = item[-1]
+        item[-1] = item[-1].split('#')[0]
+        finger = ''
+        item = [x for x in item if x.split(':')[-1]!='null']
+        finger = "&&".join(item[1:-1])
+        print_list.append((finger,finger_num))
+    return print_list
+
+##获取资产指纹树大于某个阈值的指纹
+
+def get_much_finger(Tree,len):
+    fp = open('./finger.txt','w')
+    finger = get_finger(Tree)
+    for item in finger:
+        printing = item[0]
+        Last_figure = item[1]
+        numcount = int(Last_figure.split('#')[-1])
+        Last_figure = Last_figure.split('#')[0]
+        if(Last_figure.split(':')[-1]!='null'):
+            printing += "&&"
+            printing += Last_figure.split('#')[0]
+        if numcount >= len:
+            out = '数量{},{}'.format(numcount, printing)
+            with open('finger.txt', 'a') as fp:
+                fp.write(out + '\n')
+    fp.close()
+
+
+
 
 
 if __name__ == '__main__':
 
     path = './dataset'
-    sql_data = read_sql_Data(path)
-    sql_data = data_processing(sql_data)
-    write2sql(sql_data)
+    # sql_data = read_sql_Data(path)
+    # sql_data = data_processing(sql_data)
+    # write2sql(sql_data)
 
-    # path = './dataset'
-    # data = read_data(path)
-    # processed_data = data_processing(data)
-    # tree = create_fingerTree(processed_data)
-    # mid,quarter,quarter3,most = cal_percentile(finger_countlist)
-    # print(mid,quarter,quarter3,most)
-    # print(finger_countlist)
-    # print(np.sum(finger_countlist))
-    # # tree = cut_leaf(tree)
-    # tree.save2file('./tree.txt', key=False)
+    data = read_data(path)
+    processed_data = data_processing(data)
+    tree = create_fingerTree(processed_data)
+    mid,quarter,quarter3,sortedarray = cal_percentile(finger_countlist)
+    print(mid,quarter,quarter3)
+
+    get_much_finger(tree,20)
+    # tree = cut_leaf(tree)
+    tree.save2file('./tree.txt', key=False)
 
 
 
