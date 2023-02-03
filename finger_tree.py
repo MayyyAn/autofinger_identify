@@ -28,7 +28,7 @@ data=[]
 sqldata = []
 finger_countlist = np.array([])
 ##函数作用 读取dir_file文件，产生字典
-
+textsum = 0
 
 def read_tocsv(dir_file):
     df = pd.read_json(dir_file, lines=True)  ## 读取json数据
@@ -99,24 +99,20 @@ def clean_server(datalist):##去除server的多余版本号
     return datalist
 
 def sort(datalist,key): ##将指定的list 依据 所给key 进行筛选排序 返回的是一个嵌套的列表 和带有词频信息的列表
-    key_index={} ##用来存不同key值所对应的list的下标
     Frequency={}
     redata=[]
-    tempindex=0
     for i in datalist:
-        try:
-            if (i[key] not in key_index.keys()):
-                key_index[i[key]] = tempindex
-                Frequency[i[key]] = 1
-                redata.append([])
-                redata[key_index[i[key]]].append(i)
-                tempindex = tempindex + 1
-            else:
-                Frequency[i[key]] += 1
-                redata[key_index[i[key]]].append(i)
-        except:
-            continue
+        Frequency[i[key]]=0
+    for i in datalist:
+        Frequency[i[key]]+=1
+    freindex = []
     Frequency = sorted(Frequency.items(), key=lambda x: x[1], reverse=True) ##词频信息从大到小
+    for i in Frequency:
+        freindex.append(i[0])
+    for i in range(len(freindex)):
+        redata.append([])
+    for i in datalist:
+        redata[freindex.index(i[key])].append(i)
     tempFe=[]
     for i in Frequency:
         tempFe.append(i)
@@ -135,16 +131,7 @@ def read_data(path):
         file_path = '' + path + '\\' + i
         read_tocsv(file_path)
         count+=1
-        if count==1:
-            break
     return data
-
-# path='./dataset'
-# file_name = os.listdir(path)
-# for i in file_name:
-#     file_path=''+path+'\\'+i
-#     read_tocsv(file_path)
-
 
 
 
@@ -167,18 +154,23 @@ def data_processing(_data):
 
 
 def create_fingerTree(data):
-    global finger_countlist
     id = 0
     rootqueue = Queue()
     tree = Tree()
     tree.create_node("root", 0)
     List, fre = sort(data, "server")
     for i in fre:
+        nodename = "server:"
+        nodename += i[0]
+        if nodename.split(':')[-1] == 'null':
+            null_root = 0
+            rootqueue.put(null_root)
+            continue
         id += 1
         rootqueue.put(id)
-        tree.create_node(i[0], id, 0)
-
+        tree.create_node(nodename, id, 0,data=i[1])
     for key in common_header:
+        print(key)
         if (key == 'server'):  ##已经分了server
             continue
         TempList = []
@@ -188,18 +180,19 @@ def create_fingerTree(data):
             for j in temp:
                 TempList.append(j)
             for i in children:
+                if (i[0].split('@')[0] == 'null'):
+                    null_root = parents
+                    rootqueue.put(null_root)
+                    continue
                 id += 1
                 rootqueue.put(id)
                 nodename = ""
                 nodename += key
                 nodename += ":"
                 nodename += i[0].split('@')[0]
-                if key == common_header[-1]:
-                    nodename += "#"
-                    nodename += str(i[1])
-                    finger_countlist = np.append(finger_countlist, i[1])
+                weight = int(i[1])
                 try:
-                    tree.create_node(nodename, id, parents)
+                    tree.create_node(nodename, id, parents,data=weight)
                 except:
                     continue
                     print("error")
@@ -211,19 +204,7 @@ def create_fingerTree(data):
 
 
 
-#################################
-# f=open('tree.txt','w')
-# sys.stdout=f
-# print(tree.show())
-#################################
 
-
-# tree.show(key=False)
-#
-# jsondata=tree.to_json(sort=False)
-# redata = json.loads(jsondata)
-# with open('./treedata.json','w') as f:
-#     json.dump(redata,f)
 
 
 def cut_leaf(Tree):
@@ -391,42 +372,39 @@ def read_sql_Data(path):
     return sqldata
 
 def get_finger(Tree):
-    path_list = []
-    print_list = []
+    global finger_countlist
+    Allfinger = []
+    count = 0
+    print('begin_get_finger')
+    Path_len = len(Tree.paths_to_leaves())
+    print('end_callen')
     for path in Tree.paths_to_leaves():
-        tag_list = []
-        for nid in path:
-            node = Tree.get_node(nid)
-            tag_list.append(node.tag)
-        path_list.append(tag_list)
-
-    for item in path_list:
-        finger_num = item[-1]
-        item[-1] = item[-1].split('#')[0]
-        finger = ''
-        item = [x for x in item if x.split(':')[-1]!='null']
-        finger = "&&".join(item[1:-1])
-        print_list.append((finger,finger_num))
-    return print_list
+        count+=1
+        print(count,Path_len)
+        finger=[]
+        for id in path:
+            nid =Tree.get_node(id)
+            finger.append(nid.tag)
+            if nid.is_leaf()==True:
+                finger.append(nid.data)
+                finger_countlist = np.append(finger_countlist,nid.data)
+        Allfinger.append(finger)
+    return Allfinger
 
 ##获取资产指纹树大于某个阈值的指纹
 
-def get_much_finger(Tree,len):
+def get_much_finger(Tree,threshold):
     fp = open('./finger.txt','w')
-    finger = get_finger(Tree)
-    for item in finger:
-        printing = item[0]
-        Last_figure = item[1]
-        numcount = int(Last_figure.split('#')[-1])
-        Last_figure = Last_figure.split('#')[0]
-        if(Last_figure.split(':')[-1]!='null'):
-            printing += "&&"
-            printing += Last_figure.split('#')[0]
-        if numcount >= len:
+    Allfinger = get_finger(Tree)
+    for finger in Allfinger:
+        printing = "&&".join(finger[1:-1])
+        numcount = finger[-1]
+        if numcount >= threshold:
             out = '数量{},{}'.format(numcount, printing)
             with open('finger.txt', 'a') as fp:
                 fp.write(out + '\n')
-    fp.close()
+        fp.close()
+
 
 
 
@@ -441,18 +419,18 @@ if __name__ == '__main__':
 
     data = read_data(path)
     processed_data = data_processing(data)
-    tree = create_fingerTree(processed_data)
-    mid,quarter,quarter3,sortedarray = cal_percentile(finger_countlist)
-    print(mid,quarter,quarter3)
-
-    get_much_finger(tree,20)
+    Tree = create_fingerTree(processed_data)
+    # mid,quarter,quarter3,sortedarray = cal_percentile(finger_countlist)
+    # print(mid,quarter,quarter3)
+    get_much_finger(Tree,20)
     # tree = cut_leaf(tree)
-    tree.save2file('./tree.txt', key=False)
+    open('./tree.txt','w')
+
+    Tree.save2file('./tree.txt', key=False)
 
 
-
-    # jsondata = tree.to_json(sort=False)
-    # redata = json.loads(jsondata)
-    # with open('./treedata.json', 'w') as f:
-    #     json.dump(redata, f)
+    jsondata = Tree.to_json(sort=False)
+    redata = json.loads(jsondata)
+    with open('./treedata.json', 'w') as f:
+        json.dump(redata, f)
 

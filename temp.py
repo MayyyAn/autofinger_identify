@@ -1,21 +1,3 @@
-# # 数据路径
-# import json
-#
-# path = "./dataset/http_101_AType_CN_20221011103634533_0.json"
-# # 读取文件数据
-#
-# # 由于文件中有多行，直接读取会出现错误，因此一行一行读取
-# file = open("./dataset/http_101_AType_CN_20221011103634533_0.json", 'r', encoding='utf-8')
-# papers = []
-# for line in file.readlines():
-#     dic = json.loads(line)
-#     print(dic)
-#     papers.append(dic)
-#
-# print(len(papers))
-
-
-
 
 # 用于测试小规模数据
 
@@ -48,10 +30,18 @@ data=[
 {"server":"nginx","content-type":"text/html","content-length":"12"},
 {"server":"nginx","content-type":"text/html","content-length":"15"},
 {"server":"nginx","content-type":"text/html","content-length":"16"},
+{"server":"nginx","content-type":"text/html","content-length":"null"},
+{"server":"nginx","content-type":"text/html","content-length":"null"},
+{"server":"nginx","content-type":"text/html","content-length":"null"},
 {"server":"apache","content-type":"json","content-length":"149","connection":"1"},
 {"server":"apache","content-type":"json","content-length":"13"},
 {"server":"apache","content-type":"json","content-length":"149"},
 {"server":"zit","content-type":"json","content-length":"149"},
+{"server":"null","content-type":"json","content-length":"149"},
+{"server":"null","content-type":"json","content-length":"149"},
+{"server":"null","content-type":"json","content-length":"149"},
+
+
 
 #注意key -value中的 value可能会出现格式的错误 后续操作需要加上对空格的处理
 
@@ -67,21 +57,20 @@ def select_primaryheader(datalist):
 
 
 def sort(datalist,key): ##将指定的list 依据 所给key 进行筛选排序 返回的是一个嵌套的列表 和带有词频信息的列表
-    key_index={} ##用来存不同key值所对应的list的下标
     Frequency={}
     redata=[]
-    tempindex=0
     for i in datalist:
-        if (i[key] not in key_index.keys()):
-            key_index[i[key]]=tempindex
-            Frequency[i[key]]=1
-            redata.append([])
-            redata[key_index[i[key]]].append(i)
-            tempindex=tempindex+1
-        else:
-            Frequency[i[key]]+=1
-            redata[key_index[i[key]]].append(i)
+        Frequency[i[key]]=0
+    for i in datalist:
+        Frequency[i[key]]+=1
+    freindex = []
     Frequency = sorted(Frequency.items(), key=lambda x: x[1], reverse=True) ##词频信息从大到小
+    for i in Frequency:
+        freindex.append(i[0])
+    for i in range(len(freindex)):
+        redata.append([])
+    for i in datalist:
+        redata[freindex.index(i[key])].append(i)
     tempFe=[]
     for i in Frequency:
         tempFe.append(i)
@@ -115,44 +104,20 @@ def select_primaryheader(datalist): ##加一个功能 添加server信息
 
 
 def tree2printing():
-    path_list = []
-    print_list = []
+    Allfinger = []
     for path in tree.paths_to_leaves():
-        tag_list = []
-        for nid in path:
-            node = tree.get_node(nid)
-            tag_list.append(node.tag)
-        path_list.append(tag_list)
-    for item in path_list:
-        finger_num = item[-1]
-        finger = ''
-        item = [x for x in item if x.split(':')[-1]!='null']
-        finger = "&&".join(item[1:-1])
-        print_list.append((finger,finger_num))
-    return print_list
+        finger=[]
+        for id in path:
+            nid =tree.get_node(id)
+            finger.append(nid.tag)
+            if nid.is_leaf()==True:
+                finger.append(nid.data)
+        Allfinger.append(finger)
+    return Allfinger
 
 
 
 
-
-
-
-
-# global tree
-# tree=""
-
-# def add_node(root,children):  ##r
-#     global tree
-#     tree+=root
-#     tree+=":"
-#     for i in range(len(children)):
-#         if(i==len(children)-1):
-#             tree+=children[i]
-#         else:
-#             tree+=children[i]
-#             tree+=","
-#     tree+=";"
-#     return tree
 
 
 data=normalizationdata(data)  ##数据升维
@@ -167,17 +132,17 @@ tree.create_node("root",0)
 #tree.create_node() paramater:tag,id,root
 
 List,fre=sort(data,"server")
-
-
 for i in fre:
+    nodename = "server:"
+    nodename += i[0]
     id+=1
     rootqueue.put(id)
-    node=tree.create_node(i[0],id,0)
+    tree.create_node(nodename,id,0,data=i[1])
+
 
 lastroot="root"
 
 
-finger_countlist = np.array([])
 
 for key in common_header:
     if(key=='server'): ##已经分了server
@@ -193,23 +158,19 @@ for key in common_header:
             nodename+=key
             nodename+=":"
             nodename+=i[0].split('@')[0]
-            if key==common_header[-1]:
-                nodename+="#"
-                nodename+=str(i[1])
-                finger_countlist =np.append(finger_countlist,i[1])
+            # nodename += "#"
+            # nodename += str(i[1])
+            weight = int(i[1])
             id += 1
             rootqueue.put(id)
             try:
-                tree.create_node(nodename, id, parents)
+                tree.create_node(nodename, id, parents,data=weight)
             except:
                 continue
     List=TempList
 
 
 
-
-count = 0
-path_len = len(tree.paths_to_leaves())
 
 ##减枝操作
 # for j in range(path_len):
@@ -220,7 +181,6 @@ path_len = len(tree.paths_to_leaves())
 #         if (nid.tag.split(':')[-1] == "null"):
 #             tree.link_past_node(i)
 #     path_len = len(tree.paths_to_leaves())
-
 
 
 
@@ -253,34 +213,19 @@ tree.show(key=False)
 
 
 ############################输出资产书多的指纹
-print_list = tree2printing()
-print(print_list)
+Allfinger = tree2printing()
 fp = open('./finger.txt','w')
-for item in print_list:
-    printing = item[0]
-    Last_figure = item[1]
-    numcount = int(Last_figure.split('#')[-1])
-    printing+="&&"
-    printing+=Last_figure.split('#')[0]
-    if numcount>=1:
+for finger in Allfinger:
+    print(finger)
+    printing = "&&".join(finger[1:-1])
+    numcount = finger[-1]
+    if numcount>=3:
         out='数量{},{}'.format(numcount,printing)
         with open('finger.txt', 'a') as fp:
             fp.write(out+'\n')
     fp.close()
-############################
-# print(np.sum(finger_countlist))
 
 
-
-############################输出所有指纹
-print_list = tree2printing()
-for item in print_list:
-    printing = item[0]
-    Last_figure = item[1]
-    printing+="&&"
-    printing+=Last_figure.split('#')[0]
-    print(printing)
-############################
 
 
 jsondata=tree.to_json(sort=False)
